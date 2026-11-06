@@ -1,11 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>My M324 Website</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackjack – M324</title>
+  <style>
+    :root {
+      --felt: #087044;
+      --felt-dark: #064d31;
+      --gold: #f4c95d;
+      --cream: #fff8e9;
+      --red: #c93636;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--cream);
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      background: radial-gradient(ellipse at center, #138653 0%, var(--felt) 48%, var(--felt-dark) 100%);
+    }
+    header { text-align: center; padding: 28px 16px 12px; }
+    h1 { margin: 0; color: var(--gold); font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: 3px; }
+    header p { margin: 7px 0 0; opacity: .9; }
+    main { width: min(920px, 94%); margin: 12px auto 36px; }
+    .table {
+      padding: clamp(16px, 4vw, 30px);
+      border: 5px solid #8b5a2b;
+      border-radius: 28px;
+      background: rgba(0, 42, 25, .22);
+      box-shadow: 0 18px 45px #001c1280, inset 0 0 0 2px #ffffff20;
+    }
+    .hand-area { min-height: 150px; padding: 12px 0 22px; }
+    .hand-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    h2 { margin: 0 0 12px; font-size: 1.1rem; }
+    .score { color: var(--gold); font-weight: 700; }
+    .cards { display: flex; flex-wrap: wrap; gap: 10px; min-height: 104px; }
+    .card {
+      width: 68px; height: 98px; padding: 7px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      border-radius: 8px; background: #fffdf7; color: #202020;
+      box-shadow: 0 4px 9px #00170e70; font-weight: 800;
+      border: 1px solid #ddd;
+    }
+    .card.red { color: var(--red); }
+    .card .center { align-self: center; font-size: 1.8rem; }
+    .card .bottom { align-self: flex-end; transform: rotate(180deg); }
+    .card.back {
+      color: white; border: 3px solid white;
+      background: repeating-linear-gradient(45deg, #183b83, #183b83 5px, #3158a3 5px, #3158a3 10px);
+      display: grid; place-items: center; font-size: 1.7rem;
+    }
+    .divider { height: 1px; background: #ffffff40; margin: 5px 0; }
+    .status {
+      min-height: 54px; display: grid; place-items: center; text-align: center;
+      color: var(--gold); font-size: 1.2rem; font-weight: 800;
+    }
+    .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 12px 0 18px; }
+    button {
+      border: 0; border-radius: 999px; padding: 12px 25px;
+      font: inherit; font-weight: 800; cursor: pointer;
+      transition: transform .15s, filter .15s;
+    }
+    button:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.08); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .primary { background: var(--gold); color: #382500; }
+    .secondary { background: #fff8e9; color: #173b2a; }
+    .stats { display: flex; justify-content: center; flex-wrap: wrap; gap: 24px; font-size: .95rem; }
+    .stats strong { color: var(--gold); }
+    footer { text-align: center; padding: 0 16px 25px; opacity: .75; font-size: .85rem; }
+    @media (max-width: 480px) {
+      .card { width: 56px; height: 82px; font-size: .85rem; }
+      .card .center { font-size: 1.4rem; }
+      .hand-area { min-height: 125px; }
+    }
+  </style>
 </head>
 <body>
-    <h1>Welcome to my website!</h1>
-    <p>This website was created for my M324 module.</p>
+  <header>
+    <h1>♠ BLACKJACK ♥</h1>
+    <p>Beat the dealer. Get as close to 21 as you can!</p>
+  </header>
+
+  <main>
+    <section class="table" aria-label="Blackjack game">
+      <div class="hand-area">
+        <div class="hand-title">
+          <h2>DEALER</h2>
+          <span class="score" id="dealer-score">Score: ?</span>
+        </div>
+        <div class="cards" id="dealer-cards"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="status" id="message" aria-live="polite">Press “New game” to start playing.</div>
+      <div class="divider"></div>
+      <div class="hand-area">
+        <div class="hand-title">
+          <h2>YOU</h2>
+          <span class="score" id="player-score">Score: 0</span>
+        </div>
+        <div class="cards" id="player-cards"></div>
+      </div>
+      <div class="controls">
+        <button class="primary" id="new-game">New game</button>
+        <button class="secondary" id="hit" disabled>Hit</button>
+        <button class="secondary" id="stand" disabled>Stand</button>
+      </div>
+      <div class="stats">
+        <span>Wins: <strong id="wins">0</strong></span>
+        <span>Losses: <strong id="losses">0</strong></span>
+        <span>Draws: <strong id="draws">0</strong></span>
+      </div>
+    </section>
+  </main>
+  <footer>Made for the M324 GitHub Pages exercise · Play responsibly — this is just a demo.</footer>
+
+  <script>
+    const suits = [
+      { symbol: "♠", name: "spades", red: false },
+      { symbol: "♥", name: "hearts", red: true },
+      { symbol: "♦", name: "diamonds", red: true },
+      { symbol: "♣", name: "clubs", red: false }
+    ];
+    const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+    let deck = [], player = [], dealer = [], gameOver = true, hideDealerCard = true;
+    let wins = 0, losses = 0, draws = 0;
+
+    const $ = id => document.getElementById(id);
+
+    function makeDeck() {
+      const cards = [];
+      for (const suit of suits) {
+        for (const rank of ranks) cards.push({ rank, suit });
+      }
+      for (let i = cards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cards[i], cards[j]] = [cards[j], cards[i]];
+      }
+      return cards;
+    }
+
+    function cardValue(card) {
+      if (["J", "Q", "K"].includes(card.rank)) return 10;
+      if (card.rank === "A") return 11;
+      return Number(card.rank);
+    }
+
+    function handValue(hand) {
+      let total = hand.reduce((sum, card) => sum + cardValue(card), 0);
+      let aces = hand.filter(card => card.rank === "A").length;
+      while (total > 21 && aces > 0) {
+        total -= 10;
+        aces--;
+      }
+      return total;
+    }
+
+    function drawCard(hand) {
+      if (deck.length === 0) deck = makeDeck();
+      hand.push(deck.pop());
+    }
+
+    function renderHand(elementId, hand, hideFirst = false) {
+      const container = $(elementId);
+      container.innerHTML = "";
+      hand.forEach((card, index) => {
+        const node = document.createElement("div");
+        if (hideFirst && index === 0) {
+          node.className = "card back";
+          node.textContent = "★";
+        } else {
+          node.className = "card" + (card.suit.red ? " red" : "");
+          node.innerHTML = `<span>${card.rank}${card.suit.symbol}</span><span class="center">${card.suit.symbol}</span><span class="bottom">${card.rank}${card.suit.symbol}</span>`;
+        }
+        container.appendChild(node);
+      });
+    }
+
+    function render() {
+      renderHand("player-cards", player);
+      renderHand("dealer-cards", dealer, hideDealerCard && !gameOver);
+      $("player-score").textContent = "Score: " + handValue(player);
+      $("dealer-score").textContent = "Score: " + (hideDealerCard && !gameOver ? "?" : handValue(dealer));
+      $("hit").disabled = gameOver;
+      $("stand").disabled = gameOver;
+    }
+
+    function finish(result, message) {
+      gameOver = true;
+      hideDealerCard = false;
+      if (result === "win") wins++;
+      if (result === "loss") losses++;
+      if (result === "draw") draws++;
+      $("message").textContent = message;
+      $("wins").textContent = wins;
+      $("losses").textContent = losses;
+      $("draws").textContent = draws;
+      render();
+    }
+
+    function dealerTurn() {
+      while (handValue(dealer) < 17) drawCard(dealer);
+      const playerTotal = handValue(player);
+      const dealerTotal = handValue(dealer);
+      if (dealerTotal > 21) finish("win", "Dealer busts! You win! 🎉");
+      else if (dealerTotal > playerTotal) finish("loss", "Dealer wins. Better luck next time!");
+      else if (dealerTotal < playerTotal) finish("win", "You beat the dealer! 🎉");
+      else finish("draw", "It's a draw!");
+    }
+
+    function newGame() {
+      deck = makeDeck();
+      player = [];
+      dealer = [];
+      gameOver = false;
+      hideDealerCard = true;
+      drawCard(player);
+      drawCard(dealer);
+      drawCard(player);
+      drawCard(dealer);
+      $("message").textContent = "Your move: Hit or Stand?";
+      render();
+      if (handValue(player) === 21) dealerTurn();
+    }
+
+    function hit() {
+      if (gameOver) return;
+      drawCard(player);
+      if (handValue(player) > 21) finish("loss", "Bust! You went over 21. Dealer wins.");
+      else if (handValue(player) === 21) dealerTurn();
+      else render();
+    }
+
+    $("new-game").addEventListener("click", newGame);
+    $("hit").addEventListener("click", hit);
+    $("stand").addEventListener("click", () => { if (!gameOver) dealerTurn(); });
+    render();
+  </script>
 </body>
 </html>
